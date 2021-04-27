@@ -19,6 +19,10 @@
 
 #define ERR_USAGE       "Usage: %s <server IP> <port>\n"
 #define ERR_INVALID_IP  "Error: Invalid IP address '%s'.\n"
+#define ERR_PORT_RANGE  "Error: Port must be in range [1024, 65535].\n"
+
+#define PORT_RANGE_MIN  1024
+#define PORT_RANGE_MAX  65535
 
 // int client_socket = -1;
 // char username[MAX_NAME_LEN + 1];
@@ -62,6 +66,14 @@ int main(int argc, char *argv[]) {
     // dereference
     int port = *_port;
     free(_port);
+
+    if(port < PORT_RANGE_MIN || port > PORT_RANGE_MAX) {
+        fprintf(stderr, ERR_PORT_RANGE);
+        return EXIT_FAILURE;
+    }
     printf("Debug: %i | ", port);
     printf("Parse success\n");
+
+
+
 }
