@@ -16,19 +16,19 @@
 #include <unistd.h>
 #include "util.h"
 
-int client_socket = -1;
-char username[MAX_NAME_LEN + 1];
-char inbuf[BUFLEN + 1];
-char outbuf[MAX_MSG_LEN + 1];
+// int client_socket = -1;
+// char username[MAX_NAME_LEN + 1];
+// char inbuf[BUFLEN + 1];
+// char outbuf[MAX_MSG_LEN + 1];
 
 int handle_stdin() {
-
+    return 1;
 }
 
 int handle_client_socket() {
-
+    return 1;
 }
 
 int main(int argc, char *argv[]) {
-    
+    printf("%i", argc);
 }
