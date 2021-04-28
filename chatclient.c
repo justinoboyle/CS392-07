@@ -49,15 +49,20 @@ char* fixAddress(char* a) {
 }
 
 int main(int argc, char *argv[]) {
+    int retval = EXIT_SUCCESS;
+
     if(argc != 3) {
         fprintf(stderr, ERR_USAGE, argv[0]);
         return EXIT_FAILURE;
     }
 
-    unsigned char addr[sizeof(struct in6_addr)];
+    struct sockaddr_in server_addr;
+    socklen_t addrlen = sizeof(struct sockaddr_in);
+
+    memset(&server_addr, 0, addrlen);
 
     // if successful, inet_pton() returns 1
-    if(inet_pton(AF_INET, fixAddress(argv[1]), addr) != 1) {
+    if(inet_pton(AF_INET, fixAddress(argv[1]), &server_addr.sin_addr) != 1) {
         fprintf(stderr, ERR_INVALID_IP, fixAddress(argv[1]));
         return EXIT_FAILURE;
     }
@@ -77,16 +82,63 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // configure server options
+    server_addr.sin_family = AF_INET;  
+    server_addr.sin_port = htons(port); 
+
     char* uname = malloc((MAX_NAME_LEN + 2) * sizeof(char));
 
     readUsername(uname);
 
     printf("Hello, %s. Let's try to connect to the server.\n", uname);
 
-    free(uname);
+    int client_socket;
+
+    // Create a reliable, stream socket using TCP.
+    if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        fprintf(stderr, "Error: Failed to create socket. %s.\n",
+                strerror(errno));
+        retval = EXIT_FAILURE;
+        goto EXIT;
+    }
+
+    if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in)) < 0) {
+        fprintf(stderr, "Error: Failed to connect to server. %s.\n",
+                strerror(errno));
+        retval = EXIT_FAILURE;
+        goto EXIT;
+    }
+
+    char buf[BUFLEN];
+
+    int bytes_recvd;
+
+    int ONLINE = 1;
+
+    while(ONLINE) {
+        if ((bytes_recvd = recv(client_socket, buf, BUFLEN - 1, 0)) < 0) {
+            fprintf(stderr, "Error: Failed to receive message from server. %s.\n",
+                    strerror(errno));
+            retval = EXIT_FAILURE;
+            goto EXIT;
+        }
+
+        buf[bytes_recvd] = '\0';
+        printf("%s", buf);
+    }
 
     printf("Debug: %i | ", port);
     printf("Parse success\n");
+
+    goto EXIT;
+
+EXIT:
+    if (fcntl(client_socket, F_GETFD) >= 0) {
+        close(client_socket);
+    } 
+
+    free(uname);
+    return retval;
 }
 
 int readUsername(char* uname) {

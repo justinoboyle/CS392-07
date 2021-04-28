@@ -15,6 +15,6 @@ Your program should be written in a source file called `chatclient.c`. The makef
 
 ## Submission Requirements
 
-Submit a zip containing called `chatclient.zip` that contains `chatclient.c`, `util.`h, and your `makefile`. Do not make any modifications to the server code, and do not supply the server code or binary. We will compile the server code as-is and test your client against it.
+Submit a zip containing called `chatclient.zip` that contains `chatclient.c`, `util.h`, and your `makefile`. Do not make any modifications to the server code, and do not supply the server code or binary. We will compile the server code as-is and test your client against it.
 
 The client binary is available for you to compare against your solution.
