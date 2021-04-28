@@ -27,10 +27,9 @@
 #define PORT_RANGE_MIN  1024
 #define PORT_RANGE_MAX  65535
 
-// int client_socket = -1;
-// char username[MAX_NAME_LEN + 1];
-// char inbuf[BUFLEN + 1];
-// char outbuf[MAX_MSG_LEN + 1];
+int client_socket = -1;
+char inbuf[BUFLEN + 1];
+char outbuf[MAX_MSG_LEN + 1];
 
 int readUsername(char* uname);
 
@@ -92,8 +91,6 @@ int main(int argc, char *argv[]) {
 
     printf("Hello, %s. Let's try to connect to the server.\n", uname);
 
-    int client_socket;
-
     // Create a reliable, stream socket using TCP.
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         fprintf(stderr, "Error: Failed to create socket. %s.\n",
@@ -114,6 +111,7 @@ int main(int argc, char *argv[]) {
     int bytes_recvd;
 
     int ONLINE = 1;
+    int SENT_USERNAME = 0;
 
     while(ONLINE) {
         if ((bytes_recvd = recv(client_socket, buf, BUFLEN - 1, 0)) < 0) {
@@ -121,10 +119,18 @@ int main(int argc, char *argv[]) {
                     strerror(errno));
             retval = EXIT_FAILURE;
             goto EXIT;
+        } elif(bytes_recvd == 0) {
+            fprintf(stderr, "All connections are busy. Try again later.\n");
+            retval = EXIT_FAILURE;
+            goto EXIT;
         }
 
         buf[bytes_recvd] = '\0';
         printf("%s", buf);
+
+        if(!SENT_USERNAME) {
+            strcpy(outbuf, uname);
+        }
     }
 
     printf("Debug: %i | ", port);
