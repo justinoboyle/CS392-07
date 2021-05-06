@@ -1,5 +1,5 @@
 /*
- * Name        : mtsieve.c
+ * Name        : chatclient.c
  * Author      : Justin O'Boyle & Celina Peralta
  * Date        : 27 Apr 2021
  * Description : chatclient implementation.
@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <signal.h>
 #include "util.h"
 
 #define ERR_USAGE "Usage: %s <server IP> <port>\n"
@@ -35,19 +34,6 @@ char username[MAX_NAME_LEN + 1];
 char inbuf[BUFLEN + 1];
 char outbuf[MAX_MSG_LEN + 1];
 
-int should_die = 0;
-
-// int readUsername(char *uname);
-
-void signal_handler(int sig) {
-    signal(sig, SIG_IGN);
-    register_signal_handler();
-    should_die = 1;
-}
-
-void register_signal_handler() {
-    signal(SIGINT, signal_handler);
-}
 
 void print_header() {
     printf("[%s]: ", username);
@@ -207,13 +193,9 @@ int main(int argc, char *argv[])
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
 
-    register_signal_handler();
+    readUsername(username);
 
-    char *uname = malloc((MAX_NAME_LEN + 2) * sizeof(char));
-
-    readUsername(uname);
-
-    printf("Hello, %s. Let's try to connect to the server.\n", uname);
+    printf("Hello, %s. Let's try to connect to the server.\n", username);
 
     // Create a reliable, stream socket using TCP.
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -257,8 +239,7 @@ int main(int argc, char *argv[])
     printf("\n%s\n\n", inbuf);
 
     // Send username
-    strcpy(outbuf, uname);
-    strcpy(username, uname);
+    strcpy(outbuf, username);
 
     if (send(client_socket, outbuf, strlen(outbuf), 0) < 0)
     {
@@ -290,7 +271,7 @@ int main(int argc, char *argv[])
     //       | O_NONBLOCK;
     // fcntl(STDIN_FILENO, F_SETFL, f);
 
-    while (ONLINE && !should_die)
+    while (ONLINE)
     {
         FD_ZERO(&read_sockset);
         FD_ZERO(&write_sockset);
@@ -347,6 +328,5 @@ EXIT:
         close(client_socket);
     }
 
-    free(uname);
     return retval;
 }
