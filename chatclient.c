@@ -14,7 +14,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
+#include <signal.h>
 #include "util.h"
 
 #define ERR_USAGE "Usage: %s <server IP> <port>\n"
@@ -29,10 +31,27 @@
 #define PORT_RANGE_MAX 65535
 
 int client_socket = -1;
+char username[MAX_NAME_LEN + 1];
 char inbuf[BUFLEN + 1];
 char outbuf[MAX_MSG_LEN + 1];
 
+int should_die = 0;
+
 // int readUsername(char *uname);
+
+void signal_handler(int sig) {
+    signal(sig, SIG_IGN);
+    register_signal_handler();
+    should_die = 1;
+}
+
+void register_signal_handler() {
+    signal(SIGINT, signal_handler);
+}
+
+void print_header() {
+    printf("[%s]: ", username);
+}
 
 int readUsername(char *uname)
 {
@@ -83,6 +102,7 @@ int readUsername(char *uname)
 
 int handle_stdin()
 {
+    
     enum parse_string_t res = get_string(outbuf, MAX_MSG_LEN + 1);
 
     if (res == TOO_LONG)
@@ -102,6 +122,9 @@ int handle_stdin()
         printf("Goodbye.\n");
         return EXIT_FAILURE;
     }
+
+    outbuf[0] = '\0';
+    print_header();
 
     return EXIT_SUCCESS;
 }
@@ -126,7 +149,8 @@ int handle_client_socket()
         return EXIT_FAILURE;
     }
 
-    printf("%s", inbuf);
+    printf("\n%s\n", inbuf);
+    print_header();
 
     return EXIT_SUCCESS;
 }
@@ -140,6 +164,7 @@ char *fixAddress(char *a)
 
 int main(int argc, char *argv[])
 {
+    
     int retval = EXIT_SUCCESS;
 
     if (argc != 3)
@@ -171,6 +196,7 @@ int main(int argc, char *argv[])
     int port = *_port;
     free(_port);
 
+
     if (port < PORT_RANGE_MIN || port > PORT_RANGE_MAX)
     {
         fprintf(stderr, ERR_PORT_RANGE);
@@ -180,6 +206,8 @@ int main(int argc, char *argv[])
     // configure server options
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
+
+    register_signal_handler();
 
     char *uname = malloc((MAX_NAME_LEN + 2) * sizeof(char));
 
@@ -230,6 +258,8 @@ int main(int argc, char *argv[])
 
     // Send username
     strcpy(outbuf, uname);
+    strcpy(username, uname);
+
     if (send(client_socket, outbuf, strlen(outbuf), 0) < 0)
     {
         fprintf(stderr, "Error: Failed to send username to server. %s.\n", strerror(errno));
@@ -237,26 +267,54 @@ int main(int argc, char *argv[])
         goto EXIT;
     }
 
-    printf("Debug: %i | ", port);
-    printf("Parse success\n");
+    outbuf[0] = '\0';
 
-    fd_set sockset;
-    int max_socket = client_socket > STDIN_FILENO ? client_socket : STDIN_FILENO;
+    print_header();
 
-    while (ONLINE)
+    // printf("Debug: %i | ", port);
+    // printf("Parse success\n");
+
+    fd_set read_sockset;
+    fd_set write_sockset;
+    fd_set except_sockset;
+
+
+
+    // struct timeval timeout;
+    // timeout.tv_sec = 0;
+    // timeout.tv_usec = 0;
+    int max_socket = client_socket;
+
+    // // unblock stdin
+    // int f = fcntl(STDIN_FILENO, F_GETFL, 0)
+    //       | O_NONBLOCK;
+    // fcntl(STDIN_FILENO, F_SETFL, f);
+
+    while (ONLINE && !should_die)
     {
-        FD_ZERO(&sockset);
-        FD_SET(STDIN_FILENO, &sockset);
-        FD_SET(client_socket, &sockset);
+        FD_ZERO(&read_sockset);
+        FD_ZERO(&write_sockset);
+        FD_SET(STDIN_FILENO, &read_sockset);
+        FD_SET(client_socket, &read_sockset);
 
-        if (select(max_socket + 1, &sockset, NULL, NULL, NULL) < 0 && errno != EINTR)
+        // printf("Size of outbuf is %li\n", strlen(outbuf));
+        fflush(stdout);
+        if(strlen(outbuf) > 0) {
+            FD_SET(client_socket, &write_sockset);
+        }
+
+        FD_ZERO(&except_sockset);
+        FD_SET(STDIN_FILENO, &except_sockset);
+        FD_SET(client_socket, &except_sockset);
+
+        if (select(max_socket + 1, &read_sockset, &write_sockset, &except_sockset, NULL) <= 0 && errno != EINTR)
         {
             fprintf(stderr, "Error: select() failed. %s.\n", strerror(errno));
             retval = EXIT_FAILURE;
             goto EXIT;
         }
 
-        if (ONLINE && FD_ISSET(STDIN_FILENO, &sockset))
+        if (ONLINE && FD_ISSET(STDIN_FILENO, &read_sockset))
         {
             if (handle_stdin() == EXIT_FAILURE)
             {
@@ -265,13 +323,19 @@ int main(int argc, char *argv[])
             }
         }
 
-        if (ONLINE && FD_ISSET(client_socket, &sockset))
+        if (ONLINE && FD_ISSET(client_socket, &read_sockset))
         {
             if (handle_client_socket() == EXIT_FAILURE)
             {
                 retval = EXIT_FAILURE;
                 goto EXIT;
             }
+        }
+
+        if(FD_ISSET(client_socket, &except_sockset)) {
+            printf("TODO change Exception thrown\n");
+            retval = EXIT_FAILURE;
+            goto EXIT;
         }
     }
 
