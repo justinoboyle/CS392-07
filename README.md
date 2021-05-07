@@ -10,8 +10,8 @@ Your program should be written in a source file called `chatclient.c`. The makef
 
 - [x] [Command line arguments](https://github.com/justinoboyle/CS392-07/issues/1)
 - [x] [Prompting for a username](https://github.com/justinoboyle/CS392-07/issues/2)
-- [ ] [Establishing connection](https://github.com/justinoboyle/CS392-07/issues/3)
-- [ ] [Handling activity on file descriptors (sockets)](https://github.com/justinoboyle/CS392-07/issues/4)
+- [x] [Establishing connection](https://github.com/justinoboyle/CS392-07/issues/3)
+- [x] [Handling activity on file descriptors (sockets)](https://github.com/justinoboyle/CS392-07/issues/4)
 
 ## Submission Requirements
 
